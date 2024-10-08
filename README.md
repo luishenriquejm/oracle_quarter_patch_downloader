@@ -241,8 +241,8 @@ Based on [getMOSPatch from Maris Elsins.](https://github.com/MarisElsins/getMOSP
 
 ### Patch List Mode
 
-Not all applications have patches listed in the recommeded list, so they will
-need to be downloaded seperately. To enable this, it is possible to specify a
+Not all applications have patches listed in the recommended list, so they will
+need to be downloaded separately. To enable this, it is possible to specify a
 list of patches and platforms and download the relevant patch zip files. Use
 [patches.csv.template](patches.csv.template) as a guide to create (e.g.)
 `patches.csv`, then use the following to download the patches:
@@ -252,7 +252,7 @@ list of patches and platforms and download the relevant patch zip files. Use
   ```
 The csv file has the following columns:
 * Patch ID - Patch number as per a simple search. Generally forms part of the filename.
-* CPU|Version|blank - Currently unused.
+* Version - The start of the patch release needs to match this. In general it should be set to blank, but if it is set the patch is only downloaded if the release starts with this value. This is the Release column in a patch search on Oracle Support. Particularly useful for OPatch - Patch 6880880.
 * Description - Description for convenience of the user.
 * Group - Subdirectory to place the patch into.
 * Platform - A platform code as returned with the `-l` or `--list-platforms-only` parameter. Leave it blank to select the *Generic* platform.
