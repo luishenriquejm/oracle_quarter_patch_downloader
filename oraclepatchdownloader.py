@@ -421,7 +421,6 @@ class OraclePatchDownloader:
             elif status_code == HTTPStatus.OK:
                 self.__cookie_jar.update(login_response.cookies)
                 break
-                
             else:
                 logging.fatal(f"Unexpected HTTP status code from login: {status_code}")
 
@@ -455,7 +454,7 @@ class OraclePatchDownloader:
             if tag.text.strip() in self.wanted_platforms
         }
 
-    def get_patch_info(self, patch_number, platform):
+    def get_patch_info(self, patch_number, platform, version = ''):
         """Get a list of files listing a patch number and (numeric) platform
         code.
 
@@ -468,22 +467,21 @@ class OraclePatchDownloader:
             of the file to download.
         """
         downloads = []
+        patch_meta = {}
         logging.debug(
             "Getting patch information for %s on %s.", patch_number, platform
         )
-        resp = requests.get(
+        root = xml.etree.ElementTree.fromstring(requests.get(
             "https://updates.oracle.com/Orion/Services/search",
             params={"bug": patch_number},
             headers=_HEADERS,
             cookies=self.__cookie_jar,
             timeout=_REQUEST_TIMEOUT,
-        )
-
-        root = xml.etree.ElementTree.fromstring(resp.text)
+        ).text)
 
         # If required we can keep the XML in a file as follows:
         # infofile = open(f"{patch_number}.xml","w")
-        # n = infofile.write(resp.text)
+        # infofile.write(resp.text)
         # infofile.close()
 
         # We want all the files which match our architecture. This
@@ -493,15 +491,19 @@ class OraclePatchDownloader:
         #   f"//patch[platform[@id={platform}]]/files/file/download_url/text()"
         # )
         for patch in root.iter("patch"):
-            patch_platform = patch.find("platform").attrib["id"]
+            patch_meta['platform'] = patch.find("platform").attrib["id"]
+            patch_meta['version'] = patch.find("release").attrib["name"]
             logging.debug(
-                "Patch platform: %s, Wanted platform: %s",
-                patch_platform,
+                "Patch platform: %s, Wanted: %s, Version: %s, Wanted %s",
+                patch_meta['platform'],
                 platform,
+                patch_meta['version'],
+                version,
             )
-            if patch_platform == platform:
+            if ( patch_meta['platform'] == platform
+                    and patch_meta['version'].startswith(version) ):
                 # We want these files
-                logging.debug("Platform match")
+                logging.debug("Platform and version match")
                 files = patch.find("files")
                 for patch_file in files.findall("file"):
                     patch_download_host = patch_file.find(
@@ -527,21 +529,26 @@ class OraclePatchDownloader:
 
     def download_patch_files(
         self,
-        patch_number,
-        platform,
-        subdir,
+        patch,
         progress_function=None,
         dry_run_mode=True,
     ):
         """Download files for a given patch number and numeric platform
         code.
 
+        Patch is a dictionary containing
+        * number - the patch number to download
+        * platform - the numeric platform of the patch to download
+        * version - Optional version of the patch to download
+        * subdir - Subdirectory to save the patch in
+
         Returns:
            int: Bytes downloaded.
         """
-        dldir = os.path.join(self.target_dir, subdir)
+        dldir = os.path.join(self.target_dir, patch['subdir'])
         bytes_downloaded = 0
-        files_to_download = self.get_patch_info(patch_number, platform)
+        files_to_download = self.get_patch_info(patch['number'],
+                                    patch['platform'], patch['version'])
         for file_to_download in files_to_download:
             pathlib.Path(dldir).mkdir(parents=True, exist_ok=True)
             logging.debug("Downloading file %s", file_to_download["url"])

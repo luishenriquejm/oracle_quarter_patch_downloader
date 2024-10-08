@@ -4,3 +4,5 @@ cookies.txt
 patches/*
 *.pyc
 build/*
+__pycache__
+.env/

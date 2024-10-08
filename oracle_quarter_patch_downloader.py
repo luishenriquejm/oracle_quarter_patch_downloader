@@ -109,52 +109,59 @@ def handle_file(filehandle, patch_dler, dry_run_mode=True):
     bytes_downloaded = 0
 
     with filehandle as patch_list_handle:
-        patchreader = csv.reader(
-            filter(lambda row: row[0] != "#", patch_list_handle)
+        patchreader = csv.DictReader(
+            filter(lambda row: row[0] != "#", patch_list_handle),
+            ['number', 'version', 'description', 'subdir', 'platform']
         )
         for patchinfo in patchreader:
-            if len(patchinfo) != 5:
+            if patchinfo['subdir'] is None or not patchinfo['number'].isnumeric():
                 logging.warning(
                     "Skipping as line doesn't have 5 columns: %s",
-                    ",".join(map(str, patchinfo)),
+                    ",".join(map(str, patchinfo.values())),
                 )
                 continue
             logging.debug(
-                "Downloading Patch %s for platform %s",
-                patchinfo[0],
-                patchinfo[4],
+                "Downloading Patch %s version %s for platform %s",
+                patchinfo['number'],
+                patchinfo['version'],
+                patchinfo['platform'],
             )
-            # Is the platform a number, if not convert it.
-            if patchinfo[4].isnumeric():
-                platform = int(patchinfo[4])
+            patch_to_download = {
+                'number': patchinfo['number'],
+                'version': patchinfo['version'],
+                'subdir': patchinfo['subdir']
+            }
+            # Process the platform number.
             # If platform is blank, use generic platform (Hard coded)
-            elif not patchinfo[4].strip():
-                platform = 2000
+            if not patchinfo['platform'].strip():
+                patch_to_download['platform'] = '2000'
+            elif patchinfo['platform'].isnumeric():
+                patch_to_download['platform'] = patchinfo['platform']
             else:
-                if patchinfo[4] in platforms.values():
-                    platform = list(platforms.keys())[
-                        list(platforms.values()).index(patchinfo[4])
+                # Not numeric of blank. Convert the text value to the numeric
+                # platform number.
+                if patchinfo['platform'] in platforms.values():
+                    patch_to_download['platform'] = list(platforms.keys())[
+                        list(platforms.values()).index(patchinfo['platform'])
                     ]
                 else:
                     logging.warning(
                         "Platform (%s) for patch %s} is missing."
                         " Skipping this line.",
-                        patchinfo[4],
-                        patchinfo[0],
+                        patchinfo['platform'],
+                        patchinfo['number'],
                     )
                     continue
 
             patchsz = patch_dler.download_patch_files(
-                patchinfo[0],
-                str(platform),
-                patchinfo[3],
+                patch_to_download,
                 print_progress_function,
                 dry_run_mode,
             )
             if patchsz == 0:
                 logging.warning('No data downloaded for patch %s platform %s.',
-                    patchinfo[0],
-                    patchinfo[4])
+                    patchinfo['number'],
+                    patchinfo['platform'])
             bytes_downloaded += patchsz
     return bytes_downloaded
 
