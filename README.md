@@ -250,8 +250,13 @@ list of patches and platforms and download the relevant patch zip files. Use
   ```bash
   ./oracle_quarter_patch_downloader.py -f patches.csv
   ```
+The csv file has the following columns:
+* Patch ID - Patch number as per a simple search. Generally forms part of the filename.
+* CPU|Version|blank - Currently unused.
+* Description - Description for convenience of the user.
+* Group - Subdirectory to place the patch into.
+* Platform - A platform code as returned with the `-l` or `--list-platforms-only` parameter. Leave it blank to select the *Generic* platform.
 
-At present this will download every version of a patch file that is available.
 
 ## References
 
